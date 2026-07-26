@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e57ddff36ce294a45ac83ea97352c290, type: 3}
   m_Name: AssetPublisherToolsSettings
   m_EditorClassIdentifier: 
-  <PackageVersion>k__BackingField: 1.0.3
-  _lastSyncedPackageVersion: 1.0.3
+  <PackageVersion>k__BackingField: 1.1.0
+  _lastSyncedPackageVersion: 1.1.0
   <PackageId>k__BackingField: scg.unity.publishertools
   _lastSyncedPackageId: scg.unity.publishertools
   <PackageDisplayName>k__BackingField: UnityAssetPublisherTools

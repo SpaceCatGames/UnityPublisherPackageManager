@@ -24,7 +24,7 @@ namespace SCG.UnityAssetPublisherTools.Helpers
         /// <param name="manifestAbs">Absolute path to Packages/manifest.json.</param>
         /// <param name="packageId">Dependency key to add or update.</param>
         /// <param name="dependencyValue">Dependency value to write.</param>
-        public static void SetDependency(string manifestAbs, string packageId, string dependencyValue) => 
+        public static void SetDependency(string manifestAbs, string packageId, string dependencyValue) =>
             UpdateDependency(manifestAbs, packageId, dependencyValue, addOrUpdate: true);
 
         /// <summary>
@@ -33,7 +33,7 @@ namespace SCG.UnityAssetPublisherTools.Helpers
         /// </summary>
         /// <param name="manifestAbs">Absolute path to Packages/manifest.json.</param>
         /// <param name="packageId">Dependency key to remove.</param>
-        public static void RemoveDependency(string manifestAbs, string packageId) => 
+        public static void RemoveDependency(string manifestAbs, string packageId) =>
             UpdateDependency(manifestAbs, packageId, dependencyValue: string.Empty, addOrUpdate: false);
 
         #endregion

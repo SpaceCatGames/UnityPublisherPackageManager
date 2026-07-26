@@ -1,0 +1,23 @@
+{
+    "name": "SCG.UnityAssetPublisherTools.Editor.Tests",
+    "rootNamespace": "SCG.UnityAssetPublisherTools.Tests",
+    "references": [
+        "SCG.UnityAssetPublisherTools"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_EDITOR"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false,
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+}

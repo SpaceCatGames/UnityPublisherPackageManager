@@ -112,7 +112,7 @@ namespace SCG.UnityAssetPublisherTools.Upm
             if (!f.StartsWith(o, StringComparison.OrdinalIgnoreCase))
                 return Path.Combine(tempRootAbs, Path.GetFileName(originalFileAbs));
 
-            var rel = f[o.Length..];
+            var rel = f[o.Length..].Replace('/', Path.DirectorySeparatorChar);
             return Path.Combine(tempRootAbs, rel);
         }
 

@@ -25,9 +25,6 @@ namespace SCG.UnityAssetPublisherTools.Upm
         /// <summary>UPM package id read from package.json.</summary>
         public string PackageId;
 
-        /// <summary>Manifest dependency value used for the package entry.</summary>
-        public string ManifestDependencyValue;
-
         /// <summary>True when Samples~ were toggled by this tool.</summary>
         public bool SamplesWereToggledByTool;
 

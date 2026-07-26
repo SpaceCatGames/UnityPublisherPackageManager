@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using SCG.UnityAssetPublisherTools.Helpers;
 
 namespace SCG.UnityAssetPublisherTools.Upm
 {
@@ -10,6 +11,17 @@ namespace SCG.UnityAssetPublisherTools.Upm
     /// </summary>
     internal static class UpmPackageJsonStaging
     {
+        /// <summary>
+        /// Gets the package id that the staged package will use before any files are moved.
+        /// </summary>
+        /// <param name="cfg">Settings instance used to select package metadata.</param>
+        /// <param name="originalRootAbs">Absolute source folder path.</param>
+        public static string GetEffectivePackageId(AssetPublisherToolsSettings cfg, string originalRootAbs)
+        {
+            var packageJsonAbs = ResolveEffectivePackageJsonBeforeMove(cfg, originalRootAbs);
+            return string.IsNullOrEmpty(packageJsonAbs) ? string.Empty : PackageJsonUtility.GetPackageName(packageJsonAbs);
+        }
+
         /// <summary>
         /// Copies the effective package json into Temp/package.json.
         /// The method may map an inspector-selected file into the moved Temp folder.
@@ -59,6 +71,46 @@ namespace SCG.UnityAssetPublisherTools.Upm
 
             var pkg = Path.Combine(tempRootAbs, UpmConstants.PackageJsonFileName);
             return File.Exists(pkg) ? pkg : null;
+        }
+
+        /// <summary>
+        /// Resolves an effective package manifest while the source folder is still at its original location.
+        /// </summary>
+        /// <param name="cfg">Settings instance used to locate an optional selected manifest.</param>
+        /// <param name="originalRootAbs">Absolute source folder path.</param>
+        /// <returns>Absolute effective package manifest path when found; otherwise null.</returns>
+        private static string ResolveEffectivePackageJsonBeforeMove(AssetPublisherToolsSettings cfg, string originalRootAbs)
+        {
+            if (cfg != null && cfg.PackageAsset != null)
+            {
+                var assetPath = UnityEditor.AssetDatabase.GetAssetPath(cfg.PackageAsset);
+                if (!string.IsNullOrEmpty(assetPath))
+                {
+                    var abs = UpmPathUtility.ToAbsolute(assetPath);
+                    if (File.Exists(abs) && IsWithinRoot(abs, originalRootAbs))
+                        return abs;
+                }
+            }
+
+            var free = Path.Combine(originalRootAbs, UpmConstants.FreePackageJsonFileName);
+            if (File.Exists(free))
+                return free;
+
+            var package = Path.Combine(originalRootAbs, UpmConstants.PackageJsonFileName);
+            return File.Exists(package) ? package : null;
+        }
+
+        /// <summary>
+        /// Checks whether a file path is contained within a directory root.
+        /// </summary>
+        /// <param name="path">Absolute file path.</param>
+        /// <param name="root">Absolute directory root path.</param>
+        /// <returns>True when the file path is located under the root directory.</returns>
+        private static bool IsWithinRoot(string path, string root)
+        {
+            var normalizedPath = Path.GetFullPath(path).Replace('\\', '/');
+            var normalizedRoot = Path.GetFullPath(root).Replace('\\', '/').TrimEnd('/') + "/";
+            return normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

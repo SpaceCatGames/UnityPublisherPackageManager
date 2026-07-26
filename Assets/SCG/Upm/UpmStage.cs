@@ -10,11 +10,14 @@ namespace SCG.UnityAssetPublisherTools.Upm
     [Serializable]
     internal enum UpmStage
     {
+        /// <summary>Build state was saved before moving files from the original location into Temp.</summary>
+        BuildStarted = 5,
+
         /// <summary>Files were moved from the original location into Temp.</summary>
         BuildMovedToTemp = 10,
 
-        /// <summary>Packages/manifest.json was updated to point to the final package path.</summary>
-        BuildManifestUpdated = 20,
+        /// <summary>The staged package is ready to move from Temp into Packages.</summary>
+        BuildReadyToMove = 20,
 
         /// <summary>Files were moved from Temp into Packages.</summary>
         BuildMovedToPackages = 30,
@@ -22,7 +25,16 @@ namespace SCG.UnityAssetPublisherTools.Upm
         /// <summary>Package Manager resolve finished after the build flow.</summary>
         BuildResolved = 40,
 
-        /// <summary>Packages/manifest.json dependency entry was removed during return.</summary>
-        ReturnManifestRemoved = 110
+        /// <summary>The return flow was started.</summary>
+        ReturnStarted = 110,
+
+        /// <summary>The package was moved from Packages back into Assets.</summary>
+        ReturnMovedToProject = 120,
+
+        /// <summary>Package Manager resolve was started after the package was moved back into Assets.</summary>
+        ReturnResolveStarted = 125,
+
+        /// <summary>Package Manager finished resolving the returned package.</summary>
+        ReturnResolved = 130
     }
 }
