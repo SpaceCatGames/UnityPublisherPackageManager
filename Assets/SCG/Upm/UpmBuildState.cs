@@ -1,6 +1,6 @@
 using System;
 
-namespace SCG.UnityAssetPublisherTools.Upm
+namespace SCG.UPPM.Upm
 {
     /// <summary>
     /// Stores staged operation data for the UPM build/return workflow.

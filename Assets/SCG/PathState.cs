@@ -1,4 +1,4 @@
-namespace SCG.UnityAssetPublisherTools
+namespace SCG.UPPM
 {
     /// <summary>
     /// Describes how a filesystem path is currently occupied.

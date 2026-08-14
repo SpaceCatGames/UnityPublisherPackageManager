@@ -1,10 +1,10 @@
 using System;
 using System.Linq;
-using SCG.UnityAssetPublisherTools.Upm;
+using SCG.UPPM.Upm;
 using UnityEditor;
 using UnityEngine;
 
-namespace SCG.UnityAssetPublisherTools
+namespace SCG.UPPM
 {
     /// <summary>
     /// Coordinates synchronization between hidden package folders and editable root mirrors under Assets.
@@ -33,15 +33,17 @@ namespace SCG.UnityAssetPublisherTools
 
         #endregion
 
-        #region Unity
+        #region Initialization
 
-        [InitializeOnLoadMethod]
-        private static void Initialize()
+        /// <summary>
+        /// Schedules the initial mirror reconciliation when persistent settings exist and the current process may access project assets.
+        /// </summary>
+        internal static void TryScheduleInitialSync()
         {
             if (IsAssetImportWorkerProcess())
                 return;
 
-            if (!AssetPublisherToolsSettings.TryGetPersistentInstance(out _))
+            if (!UppmSettings.TryGetPersistentInstance(out _))
                 return;
 
             ScheduleSync();
@@ -53,15 +55,15 @@ namespace SCG.UnityAssetPublisherTools
 
         /// <summary>
         /// Toggles synchronization of hidden Samples~/Documentation~ folders into root mirror folders under Assets.
-        /// The setting is stored in AssetPublisherToolsSettings and immediately schedules a reconciliation pass.
+        /// The setting is stored in UppmSettings and immediately schedules a reconciliation pass.
         /// The menu entry remains available even when synchronization is currently disabled.
         /// </summary>
         [MenuItem(Constants.RootFolderSyncMenuPath, priority = MenuPriority)]
         private static void ToggleSync()
         {
-            if (!AssetPublisherToolsSettings.TryGetPersistentInstance(out var settings))
+            if (!UppmSettings.TryGetPersistentInstance(out var settings))
             {
-                Debug.LogError($"[{nameof(RootFolderSyncCoordinator)}] Create an {nameof(AssetPublisherToolsSettings)} asset before enabling root synchronization.");
+                Debug.LogError($"[{nameof(RootFolderSyncCoordinator)}] Create an {nameof(UppmSettings)} asset before enabling root synchronization.");
                 return;
             }
 
@@ -72,7 +74,7 @@ namespace SCG.UnityAssetPublisherTools
         [MenuItem(Constants.RootFolderSyncMenuPath, true)]
         private static bool ValidateToggleSync()
         {
-            var enabled = AssetPublisherToolsSettings.TryGetPersistentInstance(out var settings) && settings.IsRootFolderSyncEnabled;
+            var enabled = UppmSettings.TryGetPersistentInstance(out var settings) && settings.IsRootFolderSyncEnabled;
             Menu.SetChecked(Constants.RootFolderSyncMenuPath, enabled);
             return true;
         }
@@ -82,7 +84,7 @@ namespace SCG.UnityAssetPublisherTools
         #region Scheduling
 
         internal static bool IsSyncEnabled() =>
-            AssetPublisherToolsSettings.TryGetPersistentInstance(out var settings) && settings.IsRootFolderSyncEnabled;
+            UppmSettings.TryGetPersistentInstance(out var settings) && settings.IsRootFolderSyncEnabled;
 
         internal static void ScheduleSync()
         {
@@ -116,21 +118,20 @@ namespace SCG.UnityAssetPublisherTools
                    HasRelevantAssetPath(movedFromAssetPaths);
         }
 
-        internal static void PrepareForVisibleFolders(string packageRootPath)
+        internal static bool PrepareForVisibleFolders(string packageRootPath)
         {
             if (IsAssetImportWorkerProcess())
-                return;
+                return false;
 
             if (!IsSyncEnabled() || string.IsNullOrWhiteSpace(packageRootPath))
-                return;
+                return false;
 
             var changed = FlushRootMirrorsToHidden(packageRootPath);
 
             changed = s_folderPairs.Aggregate(changed,
                 (current, pair) => current | DeleteMirrorIfSafe(GetMirrorAbs(pair.MirrorAssetPath), pair.MirrorAssetPath));
 
-            if (changed)
-                AssetDatabase.Refresh();
+            return changed;
         }
 
         private static void RunScheduledSync()
@@ -181,7 +182,7 @@ namespace SCG.UnityAssetPublisherTools
         {
             bool changed;
 
-            if (!AssetPublisherToolsSettings.TryGetPersistentInstance(out var settings))
+            if (!UppmSettings.TryGetPersistentInstance(out var settings))
                 return;
 
             if (!settings.IsRootFolderSyncEnabled)
@@ -380,7 +381,7 @@ namespace SCG.UnityAssetPublisherTools
         {
             packageRootPath = string.Empty;
 
-            if (!AssetPublisherToolsSettings.TryGetPersistentInstance(out var settings) || settings.BaseFolder == null)
+            if (!UppmSettings.TryGetPersistentInstance(out var settings) || settings.BaseFolder == null)
                 return false;
 
             packageRootPath = AssetDatabase.GetAssetPath(settings.BaseFolder)?.Replace("\\", "/") ?? string.Empty;

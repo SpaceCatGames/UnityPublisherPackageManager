@@ -1,8 +1,8 @@
 {
-    "name": "SCG.UnityAssetPublisherTools.Editor.Tests",
-    "rootNamespace": "SCG.UnityAssetPublisherTools.Tests",
+    "name": "SCG.UPPM.Editor.Tests",
+    "rootNamespace": "SCG.UPPM.Tests",
     "references": [
-        "SCG.UnityAssetPublisherTools"
+        "GUID:f9f00dd9f00bee74c8bdf445ed529f10"
     ],
     "includePlatforms": [
         "Editor"

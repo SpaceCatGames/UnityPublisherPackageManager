@@ -3,20 +3,20 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
-using SCG.UnityAssetPublisherTools.Helpers;
-using static SCG.UnityAssetPublisherTools.Constants;
+using SCG.UPPM.Helpers;
+using static SCG.UPPM.Constants;
 
-namespace SCG.UnityAssetPublisherTools
+namespace SCG.UPPM
 {
     /// <summary>
-    /// Stores editor configuration used by Unity Asset Publisher Tools.
+    /// Stores editor configuration used by Unity Publisher Package Manager.
     /// Keeps selected package.json fields synchronized with inspector values.
     /// Uses delayed serialized assignment to avoid unstable editor states during import.
     /// </summary>
     [CreateAssetMenu(
-        fileName = nameof(AssetPublisherToolsSettings),
-        menuName = MenuRoot + nameof(AssetPublisherToolsSettings))]
-    public sealed class AssetPublisherToolsSettings : ScriptableObject
+        fileName = nameof(UppmSettings),
+        menuName = MenuRoot + nameof(UppmSettings))]
+    public sealed class UppmSettings : ScriptableObject
     {
         #region Serialized
 
@@ -82,14 +82,14 @@ namespace SCG.UnityAssetPublisherTools
 
         #region Singleton
 
-        private static AssetPublisherToolsSettings s_instance;
+        private static UppmSettings s_instance;
 
         /// <summary>
         /// Gets a settings instance.
         /// Loads from Resources first and falls back to an AssetDatabase search.
         /// If no asset exists, returns a temporary instance for editor-only use.
         /// </summary>
-        public static AssetPublisherToolsSettings Instance
+        public static UppmSettings Instance
         {
             get
             {
@@ -97,12 +97,12 @@ namespace SCG.UnityAssetPublisherTools
                 if (instance != null && EditorUtility.IsPersistent(instance))
                     return instance;
 
-                instance = Resources.Load<AssetPublisherToolsSettings>(nameof(AssetPublisherToolsSettings));
+                instance = Resources.Load<UppmSettings>(nameof(UppmSettings));
                 if (instance == null)
                     instance = TryFindAnyProjectAsset();
 
                 if (instance == null)
-                    instance = CreateInstance<AssetPublisherToolsSettings>();
+                    instance = CreateInstance<UppmSettings>();
 
                 s_instance = instance;
                 return instance;
@@ -115,9 +115,9 @@ namespace SCG.UnityAssetPublisherTools
         /// Returns false when no stored settings asset exists in the project.
         /// </summary>
         /// <param name="settings">Loaded persistent settings asset when available.</param>
-        internal static bool TryGetPersistentInstance(out AssetPublisherToolsSettings settings)
+        internal static bool TryGetPersistentInstance(out UppmSettings settings)
         {
-            settings = Resources.Load<AssetPublisherToolsSettings>(nameof(AssetPublisherToolsSettings));
+            settings = Resources.Load<UppmSettings>(nameof(UppmSettings));
             if (settings == null)
                 settings = TryFindAnyProjectAsset();
 
@@ -130,14 +130,14 @@ namespace SCG.UnityAssetPublisherTools
         /// Returns null when no settings asset exists in the project.
         /// </summary>
         /// <returns>Loaded settings asset or null.</returns>
-        private static AssetPublisherToolsSettings TryFindAnyProjectAsset()
+        private static UppmSettings TryFindAnyProjectAsset()
         {
-            var guid = AssetDatabase.FindAssets($"t:{nameof(AssetPublisherToolsSettings)}").FirstOrDefault();
+            var guid = AssetDatabase.FindAssets($"t:{nameof(UppmSettings)}").FirstOrDefault();
             if (string.IsNullOrWhiteSpace(guid))
                 return null;
 
             var path = AssetDatabase.GUIDToAssetPath(guid);
-            return string.IsNullOrWhiteSpace(path) ? null : AssetDatabase.LoadAssetAtPath<AssetPublisherToolsSettings>(path);
+            return string.IsNullOrWhiteSpace(path) ? null : AssetDatabase.LoadAssetAtPath<UppmSettings>(path);
         }
 
         /// <summary>

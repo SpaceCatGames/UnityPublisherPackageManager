@@ -7,7 +7,7 @@ using UnityEditor.PackageManager;
 using UnityEngine.TestTools;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
-namespace SCG.UnityAssetPublisherTools.Tests
+namespace SCG.UPPM.Tests
 {
     /// <summary>
     /// Verifies Unity Package Manager discovers embedded packages without manifest self-references.

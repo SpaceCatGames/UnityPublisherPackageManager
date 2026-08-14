@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEditor.Build;
 #endif
 
-namespace SCG.UnityAssetPublisherTools.Helpers
+namespace SCG.UPPM.Helpers
 {
     public class DefineSymbolsManager
     {

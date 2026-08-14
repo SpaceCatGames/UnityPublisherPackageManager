@@ -1,7 +1,7 @@
-using SCG.UnityAssetPublisherTools.Helpers;
+using SCG.UPPM.Helpers;
 using UnityEditor;
 
-namespace SCG.UnityAssetPublisherTools
+namespace SCG.UPPM
 {
     /// <summary>
     /// Provides editor menu entries for optional scripting defines.
@@ -14,7 +14,7 @@ namespace SCG.UnityAssetPublisherTools
 
 #if !UNITY_ASTOOLS_EXPERIMENTAL
         /// <summary>
-        /// Enables the experimental define used by Unity Asset Publisher Tools.
+        /// Enables the experimental define used by Unity Publisher Package Manager.
         /// The define is added for the selected build target and also applied to Android and iOS.
         /// The operation may trigger a script recompile due to define changes.
         /// </summary>

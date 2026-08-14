@@ -1,6 +1,6 @@
 using System;
 
-namespace SCG.UnityAssetPublisherTools.Upm
+namespace SCG.UPPM.Upm
 {
     /// <summary>
     /// Represents the last completed step of the staged UPM workflow.
@@ -10,6 +10,9 @@ namespace SCG.UnityAssetPublisherTools.Upm
     [Serializable]
     internal enum UpmStage
     {
+        /// <summary>The build flow was requested and waits for the editor to become idle.</summary>
+        BuildRequested = 1,
+
         /// <summary>Build state was saved before moving files from the original location into Temp.</summary>
         BuildStarted = 5,
 
@@ -25,6 +28,9 @@ namespace SCG.UnityAssetPublisherTools.Upm
         /// <summary>Package Manager resolve finished after the build flow.</summary>
         BuildResolved = 40,
 
+        /// <summary>The return flow was requested and waits for the editor to become idle.</summary>
+        ReturnRequested = 100,
+
         /// <summary>The return flow was started.</summary>
         ReturnStarted = 110,
 
@@ -35,6 +41,9 @@ namespace SCG.UnityAssetPublisherTools.Upm
         ReturnResolveStarted = 125,
 
         /// <summary>Package Manager finished resolving the returned package.</summary>
-        ReturnResolved = 130
+        ReturnResolved = 130,
+
+        /// <summary>The returned project folder was imported after Package Manager released its old path.</summary>
+        ReturnImported = 140
     }
 }

@@ -1,8 +1,8 @@
 {
-  "name": "scg.unity.publishertools",
-  "version": "1.1.0",
-  "displayName": "UnityAssetPublisherTools",
-  "description": "Editor tools for publishing Unity assets: manage Samples~/Documentation~ visibility, automate package versioning, and build or return local UPM packages.",
+  "name": "scg.unity.uppm",
+  "version": "2.0.0",
+  "displayName": "UPPM - Unity Publisher Package Manager",
+  "description": "A Unity Editor toolkit for preparing, managing, and publishing assets as UPM packages.",
   "unity": "2021.3",
   "unityRelease": "45f2",
   "category": "Tools",
@@ -10,7 +10,5 @@
     "name": "Space Cat Games",
     "email": "spacecatgames004@gmail.com"
   },
-  "dependencies": {
-	  
-  }
+  "dependencies": {}
 }

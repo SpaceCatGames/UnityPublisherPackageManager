@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
 using UnityEngine;
 
-namespace SCG.UnityAssetPublisherTools.Helpers
+namespace SCG.UPPM.Helpers
 {
     /// <summary>
     /// Provides editor-only helpers for reading and updating package.json metadata.

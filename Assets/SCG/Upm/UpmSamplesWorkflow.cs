@@ -2,7 +2,7 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
-namespace SCG.UnityAssetPublisherTools.Upm
+namespace SCG.UPPM.Upm
 {
     /// <summary>
     /// Coordinates Samples~ and Documentation~ folder visibility for the staged UPM workflow.

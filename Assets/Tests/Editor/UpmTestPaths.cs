@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace SCG.UnityAssetPublisherTools.Tests
+namespace SCG.UPPM.Tests
 {
     /// <summary>
     /// Provides temporary filesystem locations for UPM editor tests.

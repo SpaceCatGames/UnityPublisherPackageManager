@@ -12,18 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e57ddff36ce294a45ac83ea97352c290, type: 3}
   m_Name: AssetPublisherToolsSettings
   m_EditorClassIdentifier: 
-  <PackageVersion>k__BackingField: 1.1.0
-  _lastSyncedPackageVersion: 1.1.0
-  <PackageId>k__BackingField: scg.unity.publishertools
-  _lastSyncedPackageId: scg.unity.publishertools
-  <PackageDisplayName>k__BackingField: UnityAssetPublisherTools
-  _lastSyncedPackageDisplayName: UnityAssetPublisherTools
-  <PackageDescription>k__BackingField: 'Editor tools for publishing Unity assets:
-    manage Samples~/Documentation~ visibility, automate package versioning, and build
-    or return local UPM packages.'
-  _lastSyncedPackageDescription: 'Editor tools for publishing Unity assets: manage
-    Samples~/Documentation~ visibility, automate package versioning, and build or
-    return local UPM packages.'
+  <PackageVersion>k__BackingField: 2.0.0
+  _lastSyncedPackageVersion: 2.0.0
+  <PackageId>k__BackingField: scg.unity.uppm
+  _lastSyncedPackageId: scg.unity.uppm
+  <PackageDisplayName>k__BackingField: UPPM - Unity Publisher Package Manager
+  _lastSyncedPackageDisplayName: UPPM - Unity Publisher Package Manager
+  <PackageDescription>k__BackingField: A Unity Editor toolkit for preparing, managing,
+    and publishing assets as UPM packages.
+  _lastSyncedPackageDescription: A Unity Editor toolkit for preparing, managing,
+    and publishing assets as UPM packages.
   <AssetRootFolder>k__BackingField: SCG
   <BaseFolder>k__BackingField: {fileID: 102900000, guid: ca7412fe184f7334d94cd38b8e4bb599, type: 3}
   <PackageAsset>k__BackingField: {fileID: 4900000, guid: b00ea02f556ed0843bfcd0ba279c2dd6, type: 3}

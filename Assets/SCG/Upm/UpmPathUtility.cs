@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
-namespace SCG.UnityAssetPublisherTools.Upm
+namespace SCG.UPPM.Upm
 {
     /// <summary>
     /// Provides path helpers used by the staged UPM workflow.
@@ -81,13 +81,13 @@ namespace SCG.UnityAssetPublisherTools.Upm
         }
 
         /// <summary>
-        /// Resolves the absolute source folder path using <see cref="AssetPublisherToolsSettings"/>.
+        /// Resolves the absolute source folder path using <see cref="UppmSettings"/>.
         /// When BaseFolder is assigned, its AssetDatabase path is preferred.
         /// Otherwise, the method falls back to a conventional Assets/folderName location.
         /// </summary>
         /// <param name="cfg">Settings instance.</param>
         /// <param name="folderName">Fallback folder name under Assets.</param>
-        public static string ResolveOriginalRootAbs(AssetPublisherToolsSettings cfg, string folderName)
+        public static string ResolveOriginalRootAbs(UppmSettings cfg, string folderName)
         {
             if (cfg == null || cfg.BaseFolder == null)
                 return ToAbsolute(UpmConstants.AssetsFolderName + "/" + folderName);

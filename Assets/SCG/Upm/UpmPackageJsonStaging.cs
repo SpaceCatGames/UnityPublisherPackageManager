@@ -1,8 +1,8 @@
 using System;
 using System.IO;
-using SCG.UnityAssetPublisherTools.Helpers;
+using SCG.UPPM.Helpers;
 
-namespace SCG.UnityAssetPublisherTools.Upm
+namespace SCG.UPPM.Upm
 {
     /// <summary>
     /// Resolves and prepares the effective package.json file inside the Temp staging folder.
@@ -16,7 +16,7 @@ namespace SCG.UnityAssetPublisherTools.Upm
         /// </summary>
         /// <param name="cfg">Settings instance used to select package metadata.</param>
         /// <param name="originalRootAbs">Absolute source folder path.</param>
-        public static string GetEffectivePackageId(AssetPublisherToolsSettings cfg, string originalRootAbs)
+        public static string GetEffectivePackageId(UppmSettings cfg, string originalRootAbs)
         {
             var packageJsonAbs = ResolveEffectivePackageJsonBeforeMove(cfg, originalRootAbs);
             return string.IsNullOrEmpty(packageJsonAbs) ? string.Empty : PackageJsonUtility.GetPackageName(packageJsonAbs);
@@ -30,7 +30,7 @@ namespace SCG.UnityAssetPublisherTools.Upm
         /// <param name="cfg">Settings instance used to locate optional package json asset.</param>
         /// <param name="originalRootAbs">Absolute original root folder path.</param>
         /// <param name="tempRootAbs">Absolute temp root folder path.</param>
-        public static string EnsureEffectivePackageJson(AssetPublisherToolsSettings cfg, string originalRootAbs, string tempRootAbs)
+        public static string EnsureEffectivePackageJson(UppmSettings cfg, string originalRootAbs, string tempRootAbs)
         {
             if (string.IsNullOrEmpty(tempRootAbs))
                 throw new ArgumentException("Temp root is empty.", nameof(tempRootAbs));
@@ -47,7 +47,7 @@ namespace SCG.UnityAssetPublisherTools.Upm
             return tempPackageJsonAbs;
         }
 
-        private static string ResolveEffectivePackageJsonAbs(AssetPublisherToolsSettings cfg, string originalRootAbs, string tempRootAbs)
+        private static string ResolveEffectivePackageJsonAbs(UppmSettings cfg, string originalRootAbs, string tempRootAbs)
         {
             if (cfg != null && cfg.PackageAsset != null)
             {
@@ -79,7 +79,7 @@ namespace SCG.UnityAssetPublisherTools.Upm
         /// <param name="cfg">Settings instance used to locate an optional selected manifest.</param>
         /// <param name="originalRootAbs">Absolute source folder path.</param>
         /// <returns>Absolute effective package manifest path when found; otherwise null.</returns>
-        private static string ResolveEffectivePackageJsonBeforeMove(AssetPublisherToolsSettings cfg, string originalRootAbs)
+        private static string ResolveEffectivePackageJsonBeforeMove(UppmSettings cfg, string originalRootAbs)
         {
             if (cfg != null && cfg.PackageAsset != null)
             {

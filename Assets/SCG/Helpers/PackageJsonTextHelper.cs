@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 
-namespace SCG.UnityAssetPublisherTools.Helpers
+namespace SCG.UPPM.Helpers
 {
     /// <summary>
     /// Implements lightweight read/write access for package.json string fields.

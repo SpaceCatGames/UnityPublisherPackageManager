@@ -1,8 +1,8 @@
 using System;
 using System.IO;
-using SCG.UnityAssetPublisherTools.Helpers;
+using SCG.UPPM.Helpers;
 
-namespace SCG.UnityAssetPublisherTools.Upm
+namespace SCG.UPPM.Upm
 {
     /// <summary>
     /// Keeps the <see cref="UpmConstants.UpmDefine"/> scripting define symbol synchronized with the current project state.
@@ -21,7 +21,7 @@ namespace SCG.UnityAssetPublisherTools.Upm
             if (IsReturnPending())
                 return;
 
-            var cfg = AssetPublisherToolsSettings.Instance;
+            var cfg = UppmSettings.Instance;
             if (ContainsPackageJson(cfg.PackageId))
                 DefineSymbolsManager.AddDefineSymbol(UpmConstants.UpmDefine);
             else
@@ -54,7 +54,12 @@ namespace SCG.UnityAssetPublisherTools.Upm
         private static bool IsReturnPending()
         {
             var stage = UpmBuildStateStorage.LoadOrCreate().Stage;
-            return stage is UpmStage.ReturnStarted or UpmStage.ReturnMovedToProject or UpmStage.ReturnResolveStarted or UpmStage.ReturnResolved;
+            return stage is UpmStage.ReturnRequested or
+                UpmStage.ReturnStarted or
+                UpmStage.ReturnMovedToProject or
+                UpmStage.ReturnResolveStarted or
+                UpmStage.ReturnResolved or
+                UpmStage.ReturnImported;
         }
     }
 }

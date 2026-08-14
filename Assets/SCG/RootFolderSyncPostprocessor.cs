@@ -1,6 +1,6 @@
 using UnityEditor;
 
-namespace SCG.UnityAssetPublisherTools
+namespace SCG.UPPM
 {
     /// <summary>
     /// Observes asset pipeline changes that are relevant to hidden folder root synchronization.

@@ -3,7 +3,7 @@ using System.IO;
 using System.Text;
 using UnityEngine;
 
-namespace SCG.UnityAssetPublisherTools.Upm
+namespace SCG.UPPM.Upm
 {
     /// <summary>
     /// Handles persistence of <see cref="UpmBuildState"/> to a JSON file under the Temp folder.
@@ -17,9 +17,16 @@ namespace SCG.UnityAssetPublisherTools.Upm
         /// Returns a new instance when the file is missing or cannot be parsed.
         /// The method is safe to call repeatedly and does not allocate when no state is present.
         /// </summary>
-        public static UpmBuildState LoadOrCreate()
+        public static UpmBuildState LoadOrCreate() => LoadOrCreate(GetStateFileAbs(), Debug.LogException);
+
+        /// <summary>
+        /// Loads state from an injected path and removes invalid data so it cannot restart a failing workflow.
+        /// </summary>
+        /// <param name="path">State file path.</param>
+        /// <param name="logException">Optional parse error logger.</param>
+        /// <returns>Persisted valid state or a new empty state.</returns>
+        internal static UpmBuildState LoadOrCreate(string path, Action<Exception> logException)
         {
-            var path = GetStateFileAbs();
             if (!File.Exists(path))
                 return new UpmBuildState();
 
@@ -27,10 +34,15 @@ namespace SCG.UnityAssetPublisherTools.Upm
             {
                 var json = File.ReadAllText(path, Encoding.UTF8);
                 var st = JsonUtility.FromJson<UpmBuildState>(json);
-                return st ?? new UpmBuildState();
+                if (st == null || (st.Stage != default && !Enum.IsDefined(typeof(UpmStage), st.Stage)))
+                    throw new InvalidDataException("UPPM build state is invalid.");
+
+                return st;
             }
-            catch
+            catch (Exception exception)
             {
+                Clear(path);
+                logException?.Invoke(exception);
                 return new UpmBuildState();
             }
         }
@@ -60,9 +72,10 @@ namespace SCG.UnityAssetPublisherTools.Upm
         /// This helper affects only bookkeeping and does not remove any assets or package folders.
         /// It should be called after a successful return flow.
         /// </summary>
-        public static void Clear()
+        public static void Clear() => Clear(GetStateFileAbs());
+
+        private static void Clear(string path)
         {
-            var path = GetStateFileAbs();
             if (File.Exists(path))
                 File.Delete(path);
         }

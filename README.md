@@ -1,129 +1,165 @@
-# UnityAssetPublisherTools
+# UPPM - Unity Publisher Package Manager
 
-UnityAssetPublisherTools is a small set of Unity Editor utilities that helps you publish your asset as an embedded UPM package and keep the repository structure comfortable during development.
+UPPM is a Unity Editor toolkit for preparing, managing, and publishing assets as UPM packages.
 
 The toolkit focuses on a practical workflow:
-- keep `Samples~` and `Documentation~` hidden or visible when you need it,
-- build an embedded package under `Packages/<Package Root Folder>`,
-- safely return everything back to the project layout,
-- preserve stable GUIDs for sample assets so imported samples keep references,
-- keep `package.json` fields and `PlayerSettings.bundleVersion` synchronized.
+
+- keep `Samples~` and `Documentation~` hidden or visible when needed;
+- build an embedded package under `Packages/<Package Id>`;
+- safely return the package to the project layout;
+- preserve stable GUIDs so imported samples keep their references;
+- synchronize selected `package.json` fields and `PlayerSettings.bundleVersion`.
 
 ## Features
 
 ### Toggle Samples and Documentation folders
+
 - Renames `Samples~` <-> `Samples` and `Documentation~` <-> `Documentation`.
-- Uses a scripting define to keep state consistent (`SAMPLES_RENAMED`).
-- Accessible via menu items under `SCG/`.
+- Uses the `SAMPLES_RENAMED` scripting define to keep compilation state consistent.
+- Provides commands under the `SCG/` menu.
 
 ### Optional root mirrors for hidden folders
-- Adds a menu toggle under `SCG/Enable Samples and Documentation root sync`.
-- When enabled and `Samples~` / `Documentation~` are hidden, keeps full mirror copies under `Assets/~Samples~` and `Assets/~Documentation~`.
-- Mirrors are treated as the editable surface while the package folders stay hidden and are copied back with their `.meta` files intact.
-- If the original folders are revealed, the tool removes the mirrors only when GUIDs and contents still match; otherwise it stops and logs an explicit error instead of overwriting data.
 
-### Preserve stable GUIDs for Samples~
-When sample assets are shipped via Package Manager import, missing `.meta` files can lead to GUID changes and broken references.
+- Adds `SCG/Enable Samples and Documentation root sync`.
+- When enabled, maintains editable mirrors at `Assets/~Samples~` and `Assets/~Documentation~` while the package folders remain hidden.
+- Copies mirror changes back with their `.meta` files intact.
+- Removes mirrors only when GUIDs and contents still match; otherwise it reports a conflict instead of overwriting data.
+
+### Preserve stable GUIDs for Samples
+
+Missing `.meta` files can change GUIDs and break references when samples are imported through Package Manager.
 
 `SamplesMetaBaker`:
-- forces Unity to generate `.meta` by temporarily importing assets into a temporary folder under `Assets/__SamplesMetaBake__`,
-- copies generated `.meta` files back next to originals under `Samples~`,
-- does not overwrite existing `.meta`.
 
-### Build / Return embedded UPM package
-`UpmPackageBuilder` automates switching between two layouts.
+- temporarily imports assets through `Assets/__SamplesMetaBake__` so Unity generates missing `.meta` files;
+- copies generated metadata back into `Samples~`;
+- never overwrites existing metadata.
 
-Build for UPM (non-UPM mode):
-- ensures `Samples~` and `Documentation~` are hidden before build,
-- moves the entire base folder (with the root `.meta`) into `Packages/<Package Root Folder>`,
-- ensures the effective `package.json` exists in the embedded package root,
-- bakes `.meta` for Samples~ assets,
-- adds the `UPM_PACKAGE` define and triggers required refresh/reimport steps.
+UPPM also preserves the folder GUIDs for `Samples` and `Documentation` while their tilde-suffixed forms are hidden. Hidden folders never retain adjacent `.meta` files that would trigger Unity warnings.
 
-Return back to project (UPM mode):
-- removes the dependency from `Packages/manifest.json`,
-- moves the folder back to the original location (with `.meta`),
-- reverts `Samples~` state if it was toggled by the tool,
-- removes the `UPM_PACKAGE` define.
+### Build and return an embedded UPM package
 
-### package.json utilities
-`PackageJsonUtility`:
-- reads and writes `name`, `version`, `displayName`, and `description` in `package.json`,
-- supports both TextAsset-based and file path based workflows.
+`UpmPackageBuilder` switches between project and embedded-package layouts.
+
+Build for UPM:
+
+- hides `Samples~` and `Documentation~` before building;
+- stages the package and moves it under `Packages/<Package Id>`;
+- ensures that an effective `package.json` exists in the embedded package root;
+- bakes missing sample metadata;
+- resolves Package Manager and adds the `UPM_PACKAGE` define after registration.
+
+Return to project:
+
+- moves the package out of `Packages` before resolving Package Manager;
+- returns the folder and its root `.meta` to `Assets`;
+- restores the Samples visibility state changed by the build workflow;
+- imports the returned folder and removes the `UPM_PACKAGE` define.
+
+Build and return requests survive compilation and AppDomain reloads. Invalid or failed persisted operations are cleared to prevent retry loops.
+
+### `package.json` utilities
+
+`PackageJsonUtility` reads and writes `name`, `version`, `displayName`, and `description` through `TextAsset` references or filesystem paths.
 
 ### Settings asset
-`AssetPublisherToolsSettings`:
-- central editor configuration (expected to be located in a `Resources` folder),
-- stores links to `Base Folder` and `Package Asset` (as `TextAsset`),
-- can sync `PlayerSettings.bundleVersion` and selected `package.json` fields in non-UPM layout.
+
+`UppmSettings` is the central editor configuration. It stores the package root, package manifest reference, package ID, and optional synchronized metadata.
 
 ### Define symbol management
-`DefineSymbolsManager`:
-- add/remove/check scripting define symbols,
-- supports Unity 2021.2+ via `NamedBuildTarget` and falls back to legacy APIs,
-- best-effort applies defines for Android and iOS too.
 
-## Installation (UPM)
+`DefineSymbolsManager` adds, removes, and checks scripting defines. It supports Unity 2021.2+ through `NamedBuildTarget` and falls back to the legacy APIs when required.
 
-1. Open `Window > Package Manager`.
-2. Click `+`.
+## Installation
 
 ### Git URL
 
-Add the package through Package Manager or `Packages/manifest.json`:
+In Unity, open `Window > Package Manager`, click `+`, select **Add package from git URL**, and enter:
 
-`https://github.com/SpaceCatGames/UnityAssetPublisherTools.git?path=Assets/SCG`
+```text
+https://github.com/SpaceCatGames/UnityPublisherPackageManager.git?path=Assets/SCG
+```
+
+The same URL can be used in `Packages/manifest.json`:
+
+```json
+{
+  "dependencies": {
+    "scg.unity.uppm": "https://github.com/SpaceCatGames/UnityPublisherPackageManager.git?path=Assets/SCG"
+  }
+}
+```
 
 ### Local package
 
-1. Choose `Add package from disk...`.
-2. Select `Assets/SCG/package.json` from this repository.
+Choose **Add package from disk...** in Package Manager and select `Assets/SCG/package.json` from this repository.
 
 ## Setup
 
-1. Create an `AssetPublisherToolsSettings` asset via:
-   - `Assets -> Create -> SCG -> AssetPublisherToolsSettings`
-2. Put it into a `Resources` folder (so `AssetPublisherToolsSettings.Instance` can load it).
-3. Configure the key fields:
-   - `Asset Root Folder`: folder name under `Assets/` used in project mode.
-   - `Package Root Folder`: folder name under `Packages/` used in UPM mode.
-   - `Base Folder`: folder asset representing the package root.
-   - `Package Asset`: `package.json` as a `TextAsset`.
-4. (Optional) Configure `Package Version`, `Package Id`, `Package Display Name`, `Package Description`.
+1. Create the settings asset through `Assets > Create > SCG > UppmSettings`.
+2. Place it in a `Resources` folder so `UppmSettings.Instance` can load it. For an editor-only asset, use `Assets/Editor/Resources/`.
+3. Configure:
+   - **Asset Root Folder**: package folder name under `Assets` in project mode;
+   - **Package Id**: identifier from `package.json` and embedded folder name under `Packages`;
+   - **Base Folder**: package root folder asset;
+   - **Package Asset**: `package.json` as a `TextAsset`;
+   - optional version, display name, and description synchronization.
 
-(Optional) To avoid including the settings asset in player builds, place the `Resources` folder under an editor-only path, for example:
-- `Assets/Editor/Resources/`
+After switching layouts, **Base Folder** can temporarily appear as `Missing (Object)` because its folder is physically moving. UPPM resolves the configured Assets or Packages location after the editor refreshes.
 
-Notes on references:
-- After switching between project and UPM layouts, `Base Folder` can temporarily show as `Missing (Object)`.
-  This is expected because the underlying folder asset is physically moved.
-  The settings asset will re-resolve references on the next editor refresh.
+## Menu commands
 
-## Usage (Menu)
+All commands are located under `SCG/`:
 
-All menu items live under `SCG/`:
+- **Show Samples and Documentation folders** / **Hide Samples and Documentation folders** toggles the tilde-suffixed folder names.
+- **Enable Samples and Documentation root sync** toggles editable root mirrors. The setting is stored in `UppmSettings` and disabled by default.
+- **Build for UPM Package** converts the configured folder into an embedded package.
+- **Return from UPM Package (to project)** restores the project layout.
+- **Enable UNITY_ASTOOLS_EXPERIMENTAL Define** adds the optional experimental define.
 
-- Show Samples and Documentation folders / Hide Samples and Documentation folders
-  Toggles `Samples~` and `Documentation~` visibility by renaming folders.
+## Completion events
 
-- Enable Samples and Documentation root sync
-  Toggles the optional root-level mirrors `Assets/~Samples~` and `Assets/~Documentation~`.
-  The setting is stored in `AssetPublisherToolsSettings` and is disabled by default.
+Editor tools can continue after UPPM finishes an operation without polling `EditorApplication.update` or counting frames. Completion notifications are stored under the project's `Temp` directory so they survive compilation and AppDomain reloads while that directory remains intact. They are published after the editor becomes idle, but are not guaranteed to survive an editor restart, `Temp` cleanup, or project backup and restoration.
 
-- Build for UPM Package
-  Builds an embedded package and switches the project into UPM mode.
+Static event subscriptions do not survive an AppDomain reload. Subscribing immediately before `BuildOrReturn()`, `EnsureVisible()`, or `EnsureHidden()` is valid only when that particular operation does not trigger compilation. For reliable delivery after a scripting-define change, restore the subscription from `InitializeOnLoadMethod` as shown below. Removing the handler before adding it makes repeated initialization idempotent.
 
-- Return from UPM Package (to project)
-  Restores the original project layout from the embedded package.
+```csharp
+[InitializeOnLoadMethod]
+private static void Initialize()
+{
+    UpmPackageBuilder.ReturnCompleted -= OnReturnCompleted;
+    UpmPackageBuilder.ReturnCompleted += OnReturnCompleted;
+    SamplesRenamer.VisibilityChangeCompleted -= OnVisibilityChangeCompleted;
+    SamplesRenamer.VisibilityChangeCompleted += OnVisibilityChangeCompleted;
+}
 
-- Enable UNITY_ASTOOLS_EXPERIMENTAL Define
-  Adds an optional experimental define for local workflows.
+private static void OnReturnCompleted(string returnedRootPath)
+{
+    // Continue work that requires the package under Assets.
+}
+
+private static void OnVisibilityChangeCompleted(
+    SamplesVisibility visibility,
+    string packageRootPath)
+{
+    // Continue work after Samples and Documentation finish importing.
+}
+```
+
+Available package events:
+
+- `UpmPackageBuilder.ActionCompleted` for any completed package action;
+- `UpmPackageBuilder.BuildCompleted` after conversion to an embedded package;
+- `UpmPackageBuilder.ReturnCompleted` after return to the project;
+- `SamplesRenamer.VisibilityChangeCompleted` after a visibility request completes.
+
+`EnsureVisible()` and `EnsureHidden()` publish completion even when the requested state is already applied. Concurrent visibility requests are serialized in FIFO order. Persist consumer-specific intent before starting an operation because UPPM events describe completed library operations, not product-specific follow-up work.
 
 ## Notes
 
-- This toolkit is editor-only by design.
-- Folder moves can fail if files are locked by external tools (File Explorer windows, IDEs/code editors, VCS clients, antivirus scanners, and any external processes touching the folder).
-- `SamplesMetaBaker` uses a temporary folder under `Assets/` and cleans it up after work.
+- UPPM is editor-only.
+- Folder moves can fail while project files are locked by another application.
+- `SamplesMetaBaker` removes its temporary `Assets/__SamplesMetaBake__` folder after use.
 
 ## License
 

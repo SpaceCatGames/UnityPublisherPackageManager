@@ -1,4 +1,4 @@
-namespace SCG.UnityAssetPublisherTools
+namespace SCG.UPPM
 {
     /// <summary>
     /// Defines constants shared by editor utilities and settings synchronization code.

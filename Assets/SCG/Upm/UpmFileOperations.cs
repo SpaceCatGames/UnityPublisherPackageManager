@@ -3,12 +3,12 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace SCG.UnityAssetPublisherTools.Upm
+namespace SCG.UPPM.Upm
 {
     /// <summary>
     /// Provides file operations used by the staged UPM workflow.
     /// The helpers move folder roots together with their meta files and make interrupted moves resumable.
-    /// Exceptions are propagated so the caller can keep the persisted state for recovery.
+    /// Exceptions are propagated so the workflow can clear persisted markers and avoid reload retry loops.
     /// </summary>
     internal static class UpmFileOperations
     {

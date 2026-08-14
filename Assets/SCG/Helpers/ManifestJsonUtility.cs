@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace SCG.UnityAssetPublisherTools.Helpers
+namespace SCG.UPPM.Helpers
 {
     /// <summary>
     /// Provides editor-friendly helpers for manipulating Packages/manifest.json.

@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace SCG.UnityAssetPublisherTools.Helpers
+namespace SCG.UPPM.Helpers
 {
     /// <summary>
     /// Provides small JSON string helpers that are safe to use in editor utilities.

@@ -1,8 +1,8 @@
 using System.IO;
 using NUnit.Framework;
-using SCG.UnityAssetPublisherTools.Upm;
+using SCG.UPPM.Upm;
 
-namespace SCG.UnityAssetPublisherTools.Tests
+namespace SCG.UPPM.Tests
 {
     /// <summary>
     /// Verifies path normalization and file remapping used by the UPM workflow.

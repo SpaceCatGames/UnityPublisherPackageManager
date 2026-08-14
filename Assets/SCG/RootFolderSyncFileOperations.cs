@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using SCG.UnityAssetPublisherTools.Upm;
+using SCG.UPPM.Upm;
 using UnityEditor;
 
-namespace SCG.UnityAssetPublisherTools
+namespace SCG.UPPM
 {
     /// <summary>
     /// Provides filesystem helpers for the root mirror synchronization workflow.

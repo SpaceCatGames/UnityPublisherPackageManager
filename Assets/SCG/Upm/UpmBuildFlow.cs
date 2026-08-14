@@ -1,4 +1,4 @@
-using SCG.UnityAssetPublisherTools.Helpers;
+using SCG.UPPM.Helpers;
 using System;
 using System.IO;
 using UnityEditor;
@@ -6,7 +6,7 @@ using UnityEditor.PackageManager;
 using UnityEngine;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
-namespace SCG.UnityAssetPublisherTools.Upm
+namespace SCG.UPPM.Upm
 {
     /// <summary>
     /// Implements the staged UPM build and return flows.
@@ -24,14 +24,44 @@ namespace SCG.UnityAssetPublisherTools.Upm
         #region Public API
 
         /// <summary>
-        /// Starts the build flow for converting the configured project folder into an embedded package.
-        /// The method persists its state before every filesystem move and enables package compilation after Package Manager registration.
+        /// Requests conversion of the configured project folder into an embedded package.
+        /// The request waits for an idle editor, persists before every filesystem move, and enables package compilation after Package Manager registration.
         /// </summary>
         public static void Build()
         {
-            var cfg = AssetPublisherToolsSettings.Instance;
+            var st = UpmBuildStateStorage.LoadOrCreate();
+            if (IsBuildPending(st.Stage))
+                return;
+
+            st.Stage = UpmStage.BuildRequested;
+            UpmBuildStateStorage.Save(st);
+            ScheduleWhenEditorIdle(BeginBuild);
+        }
+
+        /// <summary>
+        /// Initializes paths and starts a requested build after the editor becomes idle.
+        /// </summary>
+        private static void BeginBuild()
+        {
+            var st = UpmBuildStateStorage.LoadOrCreate();
+            if (st.Stage != UpmStage.BuildRequested)
+                return;
+
+            ExecuteRequestedInitialization(() => InitializeBuild(st));
+        }
+
+        /// <summary>
+        /// Validates build inputs and persists the first resumable stage before scheduling filesystem work.
+        /// </summary>
+        /// <param name="st">Persisted requested build state.</param>
+        private static void InitializeBuild(UpmBuildState st)
+        {
+            var cfg = UppmSettings.Instance;
             if (!cfg.TrySyncImmediately())
-                throw new InvalidOperationException("Unity editor is busy. Try again after compilation or import completes.");
+            {
+                ScheduleWhenEditorIdle(BeginBuild);
+                return;
+            }
 
             var folderName = UpmPathUtility.GetSafeFolderName(cfg.AssetRootFolder);
             var originalRootAbs = UpmPathUtility.ResolveOriginalRootAbs(cfg, folderName);
@@ -49,7 +79,6 @@ namespace SCG.UnityAssetPublisherTools.Upm
             if (Directory.Exists(tempRootAbs))
                 throw new InvalidOperationException($"Staging folder already exists: {tempRootAbs}");
 
-            var st = UpmBuildStateStorage.LoadOrCreate();
             st.AssetRootFolder = folderName;
             st.OriginalRootAbs = originalRootAbs;
             st.TempRootAbs = tempRootAbs;
@@ -62,7 +91,8 @@ namespace SCG.UnityAssetPublisherTools.Upm
         }
 
         /// <summary>
-        /// Starts the return flow for converting the embedded package back into a project folder.
+        /// Requests conversion of the embedded package back into a project folder.
+        /// The request waits for an idle editor and is idempotent while return work is pending.
         /// The flow moves the folder out of Packages before resolving Package Manager.
         /// On completion, the UPM define symbol is removed to recompile into project mode.
         /// </summary>
@@ -71,11 +101,42 @@ namespace SCG.UnityAssetPublisherTools.Upm
 #if !UPM_PACKAGE
             Debug.LogError($"[{nameof(UpmBuildFlow)}] Return requires the {UpmConstants.UpmDefine} define.");
 #else
-            var cfg = AssetPublisherToolsSettings.Instance;
-            if (!cfg.TrySyncImmediately())
-                throw new InvalidOperationException("Unity editor is busy. Try again after compilation or import completes.");
-
             var st = UpmBuildStateStorage.LoadOrCreate();
+            if (IsReturnPending(st.Stage))
+                return;
+
+            st.Stage = UpmStage.ReturnRequested;
+            UpmBuildStateStorage.Save(st);
+            ScheduleWhenEditorIdle(BeginReturn);
+#endif
+        }
+
+#if UPM_PACKAGE
+        /// <summary>
+        /// Initializes and starts a requested return after the editor becomes idle.
+        /// </summary>
+        private static void BeginReturn()
+        {
+            var st = UpmBuildStateStorage.LoadOrCreate();
+            if (st.Stage != UpmStage.ReturnRequested)
+                return;
+
+            ExecuteRequestedInitialization(() => InitializeReturn(st));
+        }
+
+        /// <summary>
+        /// Validates return inputs and persists the first resumable stage before scheduling filesystem work.
+        /// </summary>
+        /// <param name="st">Persisted requested return state.</param>
+        private static void InitializeReturn(UpmBuildState st)
+        {
+            var cfg = UppmSettings.Instance;
+            if (!cfg.TrySyncImmediately())
+            {
+                ScheduleWhenEditorIdle(BeginReturn);
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(st.PackageId))
                 st.PackageId = cfg.PackageId;
 
@@ -85,8 +146,8 @@ namespace SCG.UnityAssetPublisherTools.Upm
             st.Stage = UpmStage.ReturnStarted;
             UpmBuildStateStorage.Save(st);
             EditorApplication.delayCall += MovePackagesBackToProject;
-#endif
         }
+#endif
 
         /// <summary>
         /// Resumes the persisted build or return operation after a domain reload.
@@ -96,6 +157,9 @@ namespace SCG.UnityAssetPublisherTools.Upm
         {
             switch (UpmBuildStateStorage.LoadOrCreate().Stage)
             {
+                case UpmStage.BuildRequested:
+                    ScheduleWhenEditorIdle(BeginBuild);
+                    return;
                 case UpmStage.BuildStarted:
                     EditorApplication.delayCall += MoveOriginalToTemp;
                     return;
@@ -108,6 +172,11 @@ namespace SCG.UnityAssetPublisherTools.Upm
                 case UpmStage.BuildMovedToPackages:
                     EditorApplication.delayCall += ResolveAfterMove;
                     return;
+                case UpmStage.ReturnRequested:
+#if UPM_PACKAGE
+                    ScheduleWhenEditorIdle(BeginReturn);
+#endif
+                    return;
                 case UpmStage.ReturnStarted:
                     EditorApplication.delayCall += MovePackagesBackToProject;
                     return;
@@ -116,8 +185,12 @@ namespace SCG.UnityAssetPublisherTools.Upm
                     EditorApplication.delayCall += ResolveAfterReturnMove;
                     return;
                 case UpmStage.ReturnResolved:
-                    EditorApplication.delayCall += CompleteReturnWhenEditorIdle;
+                    ScheduleWhenEditorIdle(ImportReturnedFolder);
                     return;
+                case UpmStage.ReturnImported:
+                    ScheduleWhenEditorIdle(CompleteReturnWhenEditorIdle);
+                    return;
+                case UpmStage.BuildResolved:
                 default:
                     return;
             }
@@ -131,7 +204,9 @@ namespace SCG.UnityAssetPublisherTools.Upm
         /// Moves the configured project folder into Temp and records the completed move.
         /// When the folder is already in Temp, the method completes a pending meta move and continues the workflow.
         /// </summary>
-        private static void MoveOriginalToTemp()
+        private static void MoveOriginalToTemp() => ExecuteResumableStep(MoveOriginalToTempCore);
+
+        private static void MoveOriginalToTempCore()
         {
             var st = UpmBuildStateStorage.LoadOrCreate();
             if (st.Stage != UpmStage.BuildStarted)
@@ -147,7 +222,9 @@ namespace SCG.UnityAssetPublisherTools.Upm
         /// <summary>
         /// Prepares package metadata in the staging folder and records that the package can move into Packages.
         /// </summary>
-        private static void PrepareTempBuild()
+        private static void PrepareTempBuild() => ExecuteResumableStep(PrepareTempBuildCore);
+
+        private static void PrepareTempBuildCore()
         {
             var st = UpmBuildStateStorage.LoadOrCreate();
             if (st.Stage != UpmStage.BuildMovedToTemp)
@@ -156,7 +233,7 @@ namespace SCG.UnityAssetPublisherTools.Upm
             if (!Directory.Exists(st.TempRootAbs))
                 throw new InvalidOperationException($"Staging folder is missing: {st.TempRootAbs}");
 
-            var cfg = AssetPublisherToolsSettings.Instance;
+            var cfg = UppmSettings.Instance;
             SamplesMetaBaker.Bake(st.TempRootAbs);
 
             var tempPackageJsonAbs = UpmPackageJsonStaging.EnsureEffectivePackageJson(cfg, st.OriginalRootAbs, st.TempRootAbs);
@@ -177,7 +254,9 @@ namespace SCG.UnityAssetPublisherTools.Upm
         /// Moves the prepared package into Packages and starts Package Manager resolution.
         /// When the package is already in Packages, the method completes a pending meta move before resolving it.
         /// </summary>
-        private static void MoveTempToPackagesAndResolve()
+        private static void MoveTempToPackagesAndResolve() => ExecuteResumableStep(MoveTempToPackagesAndResolveCore);
+
+        private static void MoveTempToPackagesAndResolveCore()
         {
             var st = UpmBuildStateStorage.LoadOrCreate();
             if (st.Stage != UpmStage.BuildReadyToMove)
@@ -186,17 +265,13 @@ namespace SCG.UnityAssetPublisherTools.Upm
             UpmFileOperations.EnsureFolderMovedWithMeta(st.TempRootAbs, st.PackagesRootAbs);
             st.Stage = UpmStage.BuildMovedToPackages;
             UpmBuildStateStorage.Save(st);
-            AssetDatabase.Refresh();
             ResolveAfterMove();
         }
 
         /// <summary>
         /// Resolves Package Manager after moving the package into Packages.
         /// </summary>
-        private static void ResolveAfterMove()
-        {
-            ResolveAndWaitForPackageRegistration();
-        }
+        private static void ResolveAfterMove() => ExecuteResumableStep(ResolveAndWaitForPackageRegistration);
 
         #endregion
 
@@ -206,13 +281,15 @@ namespace SCG.UnityAssetPublisherTools.Upm
         /// Moves the embedded package back into its project location and starts Package Manager resolution.
         /// When the folder is already under Assets, the method completes a pending meta move before resolving it.
         /// </summary>
-        private static void MovePackagesBackToProject()
+        private static void MovePackagesBackToProject() => ExecuteResumableStep(MovePackagesBackToProjectCore);
+
+        private static void MovePackagesBackToProjectCore()
         {
             var st = UpmBuildStateStorage.LoadOrCreate();
             if (st.Stage != UpmStage.ReturnStarted)
                 return;
 
-            var cfg = AssetPublisherToolsSettings.Instance;
+            var cfg = UppmSettings.Instance;
             var folderName = UpmPathUtility.GetSafeFolderName(cfg.AssetRootFolder);
             var packagesRootAbs = !string.IsNullOrWhiteSpace(st.PackagesRootAbs)
                 ? st.PackagesRootAbs
@@ -228,14 +305,15 @@ namespace SCG.UnityAssetPublisherTools.Upm
             st.OriginalRootAbs = originalRootAbs;
             st.Stage = UpmStage.ReturnResolveStarted;
             UpmBuildStateStorage.Save(st);
-            AssetDatabase.Refresh();
             ResolveAfterReturnMove();
         }
 
         /// <summary>
         /// Resolves Package Manager after moving the package out of Packages.
         /// </summary>
-        private static void ResolveAfterReturnMove()
+        private static void ResolveAfterReturnMove() => ExecuteResumableStep(ResolveAfterReturnMoveCore);
+
+        private static void ResolveAfterReturnMoveCore()
         {
             var st = UpmBuildStateStorage.LoadOrCreate();
             if (st.Stage == UpmStage.ReturnMovedToProject)
@@ -282,13 +360,7 @@ namespace SCG.UnityAssetPublisherTools.Upm
         /// <param name="_">Package registration event payload.</param>
         private static void OnPackagesRegistered(PackageRegistrationEventArgs _)
         {
-            if (TryCompleteBuildIfRegistered())
-            {
-                StopWaitingForPackageRegistration();
-                return;
-            }
-
-            if (TryCompleteReturnIfUnregistered())
+            if (TryCompleteBuildIfRegistered() || TryCompleteReturnIfUnregistered())
             {
                 StopWaitingForPackageRegistration();
                 return;
@@ -301,7 +373,7 @@ namespace SCG.UnityAssetPublisherTools.Upm
             StopWaitingForPackageRegistration();
             st.Stage = UpmStage.ReturnResolved;
             UpmBuildStateStorage.Save(st);
-            EditorApplication.delayCall += CompleteReturnWhenEditorIdle;
+            ScheduleWhenEditorIdle(ImportReturnedFolder);
         }
 
         /// <summary>
@@ -311,15 +383,16 @@ namespace SCG.UnityAssetPublisherTools.Upm
         private static bool TryCompleteBuildIfRegistered()
         {
             var st = UpmBuildStateStorage.LoadOrCreate();
-            if (st.Stage == UpmStage.BuildMovedToPackages && IsPackageRegistered(st.PackageId))
-            {
-                st.Stage = UpmStage.BuildResolved;
-                UpmBuildStateStorage.Save(st);
-                DefineSymbolsManager.AddDefineSymbol(UpmConstants.UpmDefine);
-                return true;
-            }
-
-            return false;
+            if (st.Stage != UpmStage.BuildMovedToPackages || !IsPackageRegistered(st.PackageId)) return false;
+            st.Stage = UpmStage.BuildResolved;
+            UpmBuildStateStorage.Save(st);
+            var requiresDomainReload = !DefineSymbolsManager.HasDefineSymbol(UpmConstants.UpmDefine);
+            UpmPackageBuilder.QueueCompletion(
+                UpmPackageAction.Build,
+                st.PackagesRootAbs,
+                requiresDomainReload,
+                () => DefineSymbolsManager.AddDefineSymbol(UpmConstants.UpmDefine));
+            return true;
         }
 
         /// <summary>
@@ -335,7 +408,7 @@ namespace SCG.UnityAssetPublisherTools.Upm
 
             st.Stage = UpmStage.ReturnResolved;
             UpmBuildStateStorage.Save(st);
-            EditorApplication.delayCall += CompleteReturnWhenEditorIdle;
+            ScheduleWhenEditorIdle(ImportReturnedFolder);
             return true;
         }
 
@@ -365,17 +438,20 @@ namespace SCG.UnityAssetPublisherTools.Upm
             }
 
             StopWaitingForPackageRegistration();
-            Debug.LogError($"[{nameof(UpmBuildFlow)}] Package Manager resolve timed out. The staged operation remains pending and will resume after the next editor reload.");
+            ClearFailedWorkflowState();
+            Debug.LogError($"[{nameof(UpmBuildFlow)}] Package Manager resolve timed out. Persisted workflow markers were cleared to prevent an editor reload loop.");
         }
 
         /// <summary>
-        /// Restores project-only state after Package Manager no longer registers the returned package.
+        /// Imports the returned project folder after Package Manager releases its former package path.
         /// </summary>
-        private static void CompleteReturnWhenEditorIdle()
+        private static void ImportReturnedFolder() => ExecuteResumableStep(ImportReturnedFolderCore);
+
+        private static void ImportReturnedFolderCore()
         {
             if (EditorApplication.isCompiling || EditorApplication.isUpdating)
             {
-                EditorApplication.delayCall += CompleteReturnWhenEditorIdle;
+                ScheduleWhenEditorIdle(ImportReturnedFolder);
                 return;
             }
 
@@ -383,10 +459,37 @@ namespace SCG.UnityAssetPublisherTools.Upm
             if (st.Stage != UpmStage.ReturnResolved || IsPackageRegistered(st.PackageId))
                 return;
 
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            st.Stage = UpmStage.ReturnImported;
+            UpmBuildStateStorage.Save(st);
+            ScheduleWhenEditorIdle(CompleteReturnWhenEditorIdle);
+        }
+
+        /// <summary>
+        /// Restores project-only state after the returned folder finishes importing.
+        /// </summary>
+        private static void CompleteReturnWhenEditorIdle() => ExecuteResumableStep(CompleteReturnWhenEditorIdleCore);
+
+        private static void CompleteReturnWhenEditorIdleCore()
+        {
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating)
+            {
+                ScheduleWhenEditorIdle(CompleteReturnWhenEditorIdle);
+                return;
+            }
+
+            var st = UpmBuildStateStorage.LoadOrCreate();
+            if (st.Stage != UpmStage.ReturnImported || IsPackageRegistered(st.PackageId))
+                return;
+
             UpmSamplesWorkflow.RestoreIfNeeded(st);
-            DefineSymbolsManager.RemoveDefineSymbol(UpmConstants.UpmDefine);
+            var requiresDomainReload = DefineSymbolsManager.HasDefineSymbol(UpmConstants.UpmDefine);
+            UpmPackageBuilder.QueueCompletion(
+                UpmPackageAction.Return,
+                st.OriginalRootAbs,
+                requiresDomainReload,
+                () => DefineSymbolsManager.RemoveDefineSymbol(UpmConstants.UpmDefine));
             UpmBuildStateStorage.Clear();
-            Debug.Log($"[{nameof(UpmBuildFlow)}] Returned package folder to: {st.OriginalRootAbs}");
         }
 
         /// <summary>
@@ -399,6 +502,7 @@ namespace SCG.UnityAssetPublisherTools.Upm
             if (string.IsNullOrWhiteSpace(packageId))
                 return false;
 
+            // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var package in PackageInfo.GetAllRegisteredPackages())
             {
                 if (string.Equals(package.name, packageId, StringComparison.Ordinal))
@@ -406,6 +510,86 @@ namespace SCG.UnityAssetPublisherTools.Upm
             }
 
             return false;
+        }
+
+        #endregion
+
+        #region Scheduling
+
+        /// <summary>
+        /// Runs initialization before any filesystem move and clears its requested state when initialization fails.
+        /// </summary>
+        /// <param name="initialize">Initialization action to execute.</param>
+        /// <param name="clearState">Optional state reset action used by tests.</param>
+        internal static void ExecuteRequestedInitialization(Action initialize, Action clearState = null)
+        {
+            if (initialize == null)
+                throw new ArgumentNullException(nameof(initialize));
+
+            try
+            {
+                initialize();
+            }
+            catch
+            {
+                (clearState ?? ClearFailedWorkflowState)();
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Executes a resumable step and clears every persisted marker if the step fails.
+        /// Files already moved remain available for manual recovery, but editor reload cannot restart the failed step indefinitely.
+        /// </summary>
+        /// <param name="step">Workflow step to execute.</param>
+        /// <param name="clearState">Optional cleanup action used by tests.</param>
+        internal static void ExecuteResumableStep(Action step, Action clearState = null)
+        {
+            if (step == null)
+                throw new ArgumentNullException(nameof(step));
+
+            try
+            {
+                step();
+            }
+            catch
+            {
+                StopWaitingForPackageRegistration();
+                (clearState ?? ClearFailedWorkflowState)();
+                throw;
+            }
+        }
+
+        private static void ClearFailedWorkflowState()
+        {
+            UpmBuildStateStorage.Clear();
+            CompletionNotificationStorage.Clear();
+        }
+
+        /// <summary>
+        /// Checks whether a persisted stage represents build work that can resume.
+        /// </summary>
+        /// <param name="stage">Persisted workflow stage.</param>
+        /// <returns>True while a build request is active; otherwise false.</returns>
+        internal static bool IsBuildPending(UpmStage stage) =>
+            stage is >= UpmStage.BuildRequested and <= UpmStage.BuildMovedToPackages;
+
+        /// <summary>
+        /// Checks whether a persisted stage represents return work that can resume.
+        /// </summary>
+        /// <param name="stage">Persisted workflow stage.</param>
+        /// <returns>True while a return request is active; otherwise false.</returns>
+        internal static bool IsReturnPending(UpmStage stage) =>
+            stage is >= UpmStage.ReturnRequested and <= UpmStage.ReturnImported;
+
+        /// <summary>
+        /// Debounces an editor callback that must run after compilation and asset updates finish.
+        /// </summary>
+        /// <param name="callback">Callback to schedule.</param>
+        private static void ScheduleWhenEditorIdle(EditorApplication.CallbackFunction callback)
+        {
+            EditorApplication.delayCall -= callback;
+            EditorApplication.delayCall += callback;
         }
 
         #endregion
@@ -419,16 +603,13 @@ namespace SCG.UnityAssetPublisherTools.Upm
         /// <param name="originalRootAbs">Absolute source folder path.</param>
         /// <returns>Configured or discovered package id.</returns>
         /// <exception cref="InvalidOperationException">Thrown when package metadata has no valid package id.</exception>
-        private static string ResolveBuildPackageId(AssetPublisherToolsSettings cfg, string originalRootAbs)
+        private static string ResolveBuildPackageId(UppmSettings cfg, string originalRootAbs)
         {
             var packageId = string.IsNullOrWhiteSpace(cfg.PackageId)
                 ? UpmPackageJsonStaging.GetEffectivePackageId(cfg, originalRootAbs)
                 : cfg.PackageId;
 
-            if (string.IsNullOrWhiteSpace(packageId))
-                throw new InvalidOperationException("Could not resolve package id before staging the source folder.");
-
-            return packageId;
+            return !string.IsNullOrWhiteSpace(packageId) ? packageId : throw new InvalidOperationException("Could not resolve package id before staging the source folder.");
         }
 
         /// <summary>
@@ -436,7 +617,7 @@ namespace SCG.UnityAssetPublisherTools.Upm
         /// </summary>
         /// <param name="cfg">Current publisher settings.</param>
         /// <param name="packageJsonAbs">Absolute staged package.json path.</param>
-        private static void SyncPackageJsonFromSettings(AssetPublisherToolsSettings cfg, string packageJsonAbs)
+        private static void SyncPackageJsonFromSettings(UppmSettings cfg, string packageJsonAbs)
         {
             if (cfg == null)
                 return;

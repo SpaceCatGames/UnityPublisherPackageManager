@@ -1,9 +1,9 @@
 using System.IO;
 using System.Text;
 using NUnit.Framework;
-using SCG.UnityAssetPublisherTools.Helpers;
+using SCG.UPPM.Helpers;
 
-namespace SCG.UnityAssetPublisherTools.Tests
+namespace SCG.UPPM.Tests
 {
     /// <summary>
     /// Verifies manifest dependency text updates and UTF-8 encoding behavior.
